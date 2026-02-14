@@ -1,11 +1,35 @@
-<!-- # Smart Bookmarks
+# Smart Bookmarks
 
-Production-ready bookmark app with Next.js 14+, Supabase, Tailwind CSS, TypeScript, and Vercel deployment.
+A production-ready bookmark management application built with Next.js 15, Supabase (Auth + Postgres + Realtime), Tailwind CSS, and TypeScript. The project demonstrates server-side session handling, Row Level Security (RLS), optimistic UI updates, and realtime multi-tab synchronization.
+
+---
+
+## Tech Stack
+
+* Next.js 15 (App Router)
+* Supabase (Auth, PostgreSQL, Realtime)
+* Tailwind CSS v4
+* TypeScript
+* Vercel Deployment
+
+---
+
+## Application Screenshot
+
+![Smart Bookmarks Screenshot](assets/images/bookmark.png)
+
+---
+
+## Demo Video
+
+[Watch Demo Video](https://github.com/karangupta982/bookmark/issues/1#issue-3942605284)
+
+---
 
 ## Installation
 
 ```bash
-npm install @supabase/supabase-js @supabase/ssr
+npm install
 ```
 
 Create `.env.local`:
@@ -21,11 +45,15 @@ Run development server:
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000)
+Visit:
+
+[http://localhost:3000](http://localhost:3000)
+
+---
 
 ## Database Setup
 
-Run in Supabase SQL editor to create the bookmarks table:
+Run in Supabase SQL Editor:
 
 ```sql
 CREATE TABLE bookmarks (
@@ -37,30 +65,28 @@ CREATE TABLE bookmarks (
 );
 
 CREATE INDEX idx_bookmarks_user_id ON bookmarks(user_id);
+
 ALTER TABLE bookmarks ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "SELECT" ON bookmarks FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "INSERT" ON bookmarks FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "DELETE" ON bookmarks FOR DELETE USING (auth.uid() = user_id);
-CREATE POLICY "UPDATE" ON bookmarks FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "SELECT" ON bookmarks
+FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "INSERT" ON bookmarks
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "DELETE" ON bookmarks
+FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "UPDATE" ON bookmarks
+FOR UPDATE USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 ```
 
-Enable Realtime for bookmarks table in Supabase dashboard.
+Enable Realtime for the bookmarks table in Supabase Dashboard → Replication.
 
-## Learn More
+Test using two accounts to verify Row Level Security isolation.
 
-Google OAuth: Configure in Supabase
-
-1. Create OAuth 2.0 credentials at Google Cloud Console
-2. Add redirect URIs for localhost and production domains
-3. Enable in Supabase Auth → Google Provider
-
-Realtime: Enable in Supabase Replication Settings
-
-Test with two accounts to verify RLS works.
- -->
-
-
+---
 
 # Problems that i ran into and how i solved them
 
