@@ -16,38 +16,70 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    let channel: any;
+
     const initDashboard = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      // 1. Get User
+      const { data: { user: authUser }, error } = await supabase.auth.getUser();
       
-      if (error || !user) {
+      if (error || !authUser) {
         router.push('/login');
         return;
       }
+      setUser(authUser);
 
-      setUser(user);
-
-      // Initial fetch of bookmarks
-      const { data, error: fetchError } = await supabase
+      // 2. Initial Data Fetch
+      const { data } = await supabase
         .from('bookmarks')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', authUser.id)
         .order('created_at', { ascending: false });
 
-      if (!fetchError) {
-        setBookmarks(data || []);
-      }
+      setBookmarks(data || []);
       setLoading(false);
+
+      // 3. Real-time Subscription
+      channel = supabase
+        .channel(`bookmarks-realtime`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*', 
+            schema: 'public',
+            table: 'bookmarks',
+            filter: `user_id=eq.${authUser.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setBookmarks((prev) => {
+                // Prevent duplicate if this tab was the one that added it
+                if (prev.find((b) => b.id === payload.new.id)) return prev;
+                return [payload.new, ...prev];
+              });
+            } else if (payload.eventType === 'DELETE') {
+              setBookmarks((prev) => prev.filter((b) => b.id !== payload.old.id));
+            }
+          }
+        )
+        .subscribe();
     };
 
     initDashboard();
-  }, [router]);
 
-  // Handle adding a bookmark locally (Optimistic Update)
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [router, supabase]);
+
+  // Logic: Add to local state immediately (Optimistic)
   const handleBookmarkAdded = (newBookmark: any) => {
-    setBookmarks((prev) => [newBookmark, ...prev]);
+    setBookmarks((prev) => {
+      if (prev.find((b) => b.id === newBookmark.id)) return prev;
+      return [newBookmark, ...prev];
+    });
   };
 
-  // Handle deleting a bookmark locally
+  // Logic: Remove from local state immediately
   const handleBookmarkDeleted = (id: string) => {
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
   };
@@ -59,8 +91,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black">
@@ -74,11 +104,12 @@ export default function DashboardPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Add a New Bookmark</h2>
-          <BookmarkForm user={user} onBookmarkAdded={handleBookmarkAdded} />
+          {/* We use user! because loading check above ensures user exists */}
+          <BookmarkForm user={user!} onBookmarkAdded={handleBookmarkAdded} />
 
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4 mt-8">Your Bookmarks</h2>
           <BookmarkList 
-            user={user} 
+            user={user!} 
             bookmarks={bookmarks} 
             onDelete={handleBookmarkDeleted} 
           />
